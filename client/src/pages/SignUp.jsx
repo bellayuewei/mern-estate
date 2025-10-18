@@ -1,7 +1,8 @@
 import {useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 
 export default function SignUp() {
+  const navigate = useNavigate();
   const [formData, setFormData]=useState({});
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,7 @@ export default function SignUp() {
 
     console.log('success:', data);
     // TODO: 成功后跳转或清空表单
-    // navigate('/'); 或 setFormData({})
+    navigate('/sign-in');
   } catch (err) {
     console.error(err);
     setError(err.message || '请求失败');
