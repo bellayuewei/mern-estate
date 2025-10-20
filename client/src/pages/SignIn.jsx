@@ -1,76 +1,80 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { signInStart, signInSuccess, signInFailure } from '../redux/user/userSlice';
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((s) => s.user); // 从 Redux 取状态
 
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  // 用一个变量表示错误“类型”（而不是直接放字符串）
-  const [error, setError] = useState(null); 
-  // 例如：null | 'MISSING_FIELDS' | 'USER_NOT_FOUND' | 'WRONG_PASSWORD' | 'NETWORK' | 'SERVER'
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
-    // 只要用户开始修改，就清除统一错误
-    if (error) setError(null);
+    setFormData((prev) => ({ ...prev, [id]: value }));
+    // 用户动了输入框就清空错误
+    if (error) dispatch(signInFailure(null));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
 
     if (!formData.email || !formData.password) {
-      setError('MISSING_FIELDS');
+      dispatch(signInFailure('MISSING_FIELDS'));
       return;
     }
 
-    setLoading(true);
     try {
+      dispatch(signInStart());
+
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // 若后端用 HttpOnly Cookie：credentials: 'include',
+        // 如果后端用 HttpOnly Cookie，打开这一行：
+        // credentials: 'include',
         body: JSON.stringify(formData),
       });
 
+      // 后端可能返回 {success, user, message} 或直接返回用户对象；两种都兼容
       const data = await res.json().catch(() => ({}));
       const status = data?.statusCode ?? res.status;
       const msg = (data?.message || '').toLowerCase();
 
       if (!res.ok || data?.success === false) {
-        if (status === 404 || msg.includes('not') && msg.includes('found')) {
-          setError('USER_NOT_FOUND');
-        } else if (status === 401 || msg.includes('wrong') && msg.includes('credentials')) {
-          setError('WRONG_PASSWORD');
+        if (status === 404 || (msg.includes('not') && msg.includes('found'))) {
+          dispatch(signInFailure('USER_NOT_FOUND'));
+        } else if (status === 401 || msg.includes('wrong') || msg.includes('credentials')) {
+          dispatch(signInFailure('WRONG_PASSWORD'));
         } else {
-          setError('SERVER'); // 其他服务器错误
+          dispatch(signInFailure('SERVER'));
         }
         return;
       }
 
-      // 成功：清空错误并跳转
-      setError(null);
+      // 成功：把用户写进 Redux，然后跳转
+      const user = data?.user ?? data;
+      dispatch(signInSuccess(user));
       navigate('/');
-    } catch (e2) {
-      setError('NETWORK'); // 网络/解析错误
-    } finally {
-      setLoading(false);
+    } catch {
+      dispatch(signInFailure('NETWORK'));
     }
   };
 
-  // 统一错误信息映射（根据 error 类型输出一条文案）
-  const errorMessage = (() => {
+  // 统一错误文案映射（基于 Redux 的 error）
+  const errorMessage = useMemo(() => {
     switch (error) {
       case 'MISSING_FIELDS': return 'Please enter email and password';
       case 'USER_NOT_FOUND': return 'User not found';
       case 'WRONG_PASSWORD': return 'Wrong Credentials';
       case 'NETWORK':        return 'Network Problems';
-      case 'SERVER':         return 'Sever Problems';
-      default: return null;
+      case 'SERVER':         return 'Server Problems';
+      case null:
+      case undefined:
+      case '':               return null;
+      default:               return typeof error === 'string' ? error : 'Sign-in error';
     }
-  })();
+  }, [error]);
 
   return (
     <div className="p-3 max-w-lg mx-auto">
@@ -110,7 +114,6 @@ export default function SignIn() {
         </Link>
       </div>
 
-      {/* 统一错误展示：放在 “Don’t have an account?” 下面 */}
       {errorMessage && (
         <p className="mt-3 text-red-600 text-sm">{errorMessage}</p>
       )}
