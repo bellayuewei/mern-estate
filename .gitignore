@@ -1,14 +1,7 @@
 .DS_Store
 *.log
 node_modules/
+**/package-lock.json
+dist/
+build/
 .env
-
-# frontend
-client/node_modules/
-client/dist/
-client/build/
-
-# backend
-api/node_modules/
-api/dist/
-api/build/
