@@ -1,8 +1,8 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit'
-import userReducer from './user/userSlice';
-import persistReducer from 'redux-persist/es/persistReducer';
-import storage from 'redux-persist/lib/storage'
-import persistStore from 'redux-persist/es/persistStore';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import userReducer from './user/userSlice.js';            // ← 建议带 .js 后缀
+
+import { persistReducer, persistStore } from 'redux-persist'; // ← 用根入口
+import storage from 'redux-persist/lib/storage';
 
 const rootReducer = combineReducers({user: userReducer})
 const persistConfig = {
