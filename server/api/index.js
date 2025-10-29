@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv'
 import userRouter from './routes/user.route.js'
 import authRouter from "./routes/auth.route.js"
+import listingRouter from "./routes/listing.route.js"
 import cookieParser from 'cookie-parser'
 
 dotenv.config() // 1) 加载 .env，把 MONGO 等环境变量塞进 process.env
@@ -23,6 +24,7 @@ app.listen(4000, ()=> { // 3) 启动服务器：监听 4000 端口
 
 app.use('/api/user',userRouter) // 4) 把 /api/user/* 的请求交给 user 路由
 app.use('/api/auth',authRouter) // 5) 把 /api/auth/* 的请求交给 auth 路由
+app.use('/api/listing',listingRouter)
 
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode||500;

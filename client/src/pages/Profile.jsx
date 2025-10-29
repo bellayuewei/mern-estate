@@ -14,7 +14,22 @@ export default function Profile() {
   const [filePerc, setFilePerc] =useState(0);
   const [fileUploadError, setFileUploadError] =useState(false);
 
-  const [formData, setFormData]= useState({})
+  //onst [formData, setFormData]= useState({})
+  const [formData, setFormData]= useState({ username:'', email:'', avatar:'', password:'' })
+
+// 从 Redux 的 currentUser 初始化表单（currentUser 异步到达也能更新）
+  useEffect(() => {
+    if (currentUser) {
+      setFormData({
+        username: currentUser.username || '',
+        email: currentUser.email || '',
+        avatar: currentUser.avatar || '',
+        password: ''
+      })
+    }
+  }, [currentUser])
+
+
   const [updateSuccess,setUpdateSuccess]=useState(false)
   const dispatch = useDispatch()
 
@@ -52,12 +67,14 @@ export default function Profile() {
       ()=>{
         setFileUploadError(false)
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL)=>
-          setFormData({...formData, avatar:downloadURL}));
+          setFormData(prev => ({ ...prev, avatar: downloadURL })));
       },);
   };
  
   const handleChange = (e) =>{
-    setFormData ({...formData, [e.target.id]:e.target.value});};
+    // 受控表单统一入口
+    setFormData(prev => ({ ...prev, [e.target.id]: e.target.value }));
+  };
   
 
   const handleSubmit = async (e)=>{
@@ -71,12 +88,16 @@ export default function Profile() {
         },
         body:JSON.stringify(formData),
       });
-      const data = await res.json()
-      if (data.success===false){
+      //const data = await res.json()
+      //if (data.success===false){
+      const data = await res.json().catch(()=> ({}))
+      if (!res.ok || data.success===false){
         dispatch(updateUserFailure(data?.message || 'Update failed'));
         return;}
       
-      dispatch(updateUserSuccess(data));
+      //dispatch(updateUserSuccess(data));
+      const updatedUser = data.user ?? data;  // 关键：只写入用户
+      dispatch(updateUserSuccess(updatedUser));
       setUpdateSuccess(true)
       
     } catch(error) {
@@ -130,8 +151,16 @@ export default function Profile() {
             (<span className='text-green-700'>Image successfully uploaded!</span>):
             ('')} 
     </p>
-    <input type='text' placeholder='username' defaultValue={currentUser.username} id='username' className='border p-3 rounded-lg' onChange={handleChange}/>
-    <input type='email' placeholder='email' defaultValue={currentUser.email} id='email' className='border p-3 rounded-lg' onChange={handleChange}/>
+    {/* <input type='text' placeholder='username' defaultValue={currentUser.username} id='username' className='border p-3 rounded-lg' onChange={handleChange}/> */}
+    <input type='text' placeholder='username' id='username'
+      className='border p-3 rounded-lg'
+      value={formData.username}
+      onChange={handleChange}/>
+    {/* <input type='email' placeholder='email' defaultValue={currentUser.email} id='email' className='border p-3 rounded-lg' onChange={handleChange}/> */}
+    <input type='email' placeholder='email' id='email'
+      className='border p-3 rounded-lg'
+      value={formData.email}
+      onChange={handleChange}/>
     <input type='password' placeholder='password' id='password' className='border p-3 rounded-lg'/>
     <button disabled={loading} className='bg-slate-700 text-white rounded-lg p-3 uppercase hover:opacity-95 disabled:opacity-80'>{loading? 'Loading...':'Update'}</button>
   </form>

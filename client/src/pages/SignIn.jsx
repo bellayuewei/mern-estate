@@ -36,13 +36,20 @@ export default function SignIn() {
         // credentials: 'include',
         body: JSON.stringify(formData),
       });
+      console.log('[signin] res.ok/status:', res.ok, res.status);
+      console.log('[signin] content-type:', res.headers.get('content-type'));
 
       // 后端可能返回 {success, user, message} 或直接返回用户对象；两种都兼容
       const data = await res.json().catch(() => ({}));
+      console.log('[signin] raw data:', data);
+
       const status = data?.statusCode ?? res.status;
       const msg = (data?.message || '').toLowerCase();
 
+
+
       if (!res.ok || data?.success === false) {
+        console.log('[signin] FAIL -> message:', data?.message);
         if (status === 404 || (msg.includes('not') && msg.includes('found'))) {
           dispatch(signInFailure('USER_NOT_FOUND'));
         } else if (status === 401 || msg.includes('wrong') || msg.includes('credentials')) {
@@ -54,8 +61,13 @@ export default function SignIn() {
       }
 
       // 成功：把用户写进 Redux，然后跳转
-      const user = data?.user ?? data;
+
+      //const user = data.user ?? data;   // 后端可能是 {success, user:{...}} 或直接 {...}
+      const user = data.user ?? data.rest ?? data;
+      console.log('[signin] dispatch user:', user);
+
       dispatch(signInSuccess(user));
+      try { localStorage.setItem('currentUser', JSON.stringify(user)); } catch {}
       navigate('/');
     } catch {
       dispatch(signInFailure('NETWORK'));
